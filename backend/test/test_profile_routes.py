@@ -13,7 +13,7 @@ from app.main import app
 from app.models.profile import Profile
 
 
-async def request(method, payload=None):
+async def request(method, payload=None, path="/profile/me", query_string=b""):
     """Exercise FastAPI directly, without a server or HTTP client dependency."""
     body = json.dumps(payload).encode() if payload is not None else b""
     messages = []
@@ -27,8 +27,8 @@ async def request(method, payload=None):
     await app({
         "type": "http", "asgi": {"version": "3.0"},
         "http_version": "1.1", "method": method,
-        "scheme": "http", "path": "/profile/me", "root_path": "",
-        "query_string": b"", "headers": [(b"content-type", b"application/json")],
+        "scheme": "http", "path": path, "root_path": "",
+        "query_string": query_string, "headers": [(b"content-type", b"application/json")],
         "server": ("test", 80), "client": ("test", 1234),
     }, receive, send)
     status = next(m["status"] for m in messages if m["type"] == "http.response.start")

@@ -33,7 +33,17 @@ export default function ProfileScreen() {
     finally { setLoading(false); }
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    let active = true;
+    getProfile().then(next => {
+      if (active) showProfile(next);
+    }).catch(error => {
+      if (active) setError(error instanceof Error ? error.message : 'Unable to load your profile.');
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => { active = false; };
+  }, []);
 
   async function save() {
     if (birthday.trim() && !/^\d{4}-\d{2}-\d{2}$/.test(birthday.trim())) {

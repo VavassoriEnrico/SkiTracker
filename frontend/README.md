@@ -2,7 +2,8 @@
 
 Frontend React Native, Expo SDK 58 e TypeScript. Per ora include registrazione,
 login, ripristino della sessione, logout e lettura/modifica del profilo.
-La barra inferiore collega Home e Profilo; il logout si trova nel Profilo.
+La barra inferiore collega Home, Levels e Profilo; il logout si trova nel Profilo.
+La navigazione usa Expo Router, con le route in `src/app`.
 Non include ancora video, analisi o richiesta del ruolo istruttore.
 
 ## Configurazione
@@ -52,7 +53,7 @@ versione dell'app Expo Go oppure usa una development build iOS.
   l'indirizzo nel browser e torna all'app per effettuare il login.
   Il completamento della sessione tramite deep link non è ancora incluso.
 - Dopo il login viene chiamato `GET /profile/me`: il backend crea il profilo
-  mancante con ruolo `student` e UUID dell'utente autenticato.
+  mancante con il ruolo predefinito del backend e UUID dell'utente autenticato.
 - Modifica i dati e salva: viene chiamato `PATCH /profile/me` con il token.
 - Chiudi e riapri l'app per verificare il ripristino della sessione.
 - Effettua il logout e prova anche un secondo account.
@@ -60,10 +61,30 @@ versione dell'app Expo Go oppure usa una development build iOS.
 Il backend attuale non cancella un campo quando riceve `null`.
 Una data di nascita vuota viene quindi omessa e mantiene il valore precedente.
 
+## Livelli di sci
+
+Apri **Levels** dalla barra inferiore. Ruota il cerchio in entrambe le direzioni
+per passare tra L1 e L7 trascinando il dito sull’anello. Tocca il centro per
+aprire il livello e usa Back per tornare al selettore.
+
+Una sola pagina di dettaglio serve tutti i livelli. Per ora mostra segnaposto
+per gli esercizi, che saranno collegati successivamente. Nome, spiegazione, obiettivo tecnico
+e link video vengono caricati da `GET /level?level_number=1` (numero da 1 a 7).
+Il video viene riprodotto dentro la pagina con i controlli nativi e lo schermo intero,
+usando l’URL pubblico del file in Supabase Storage salvato nel database. Le tre abilità vengono caricate da
+`GET /level_ability?level_id=<id>&ability_number=1` (numeri 1, 2 e 3),
+usando l’ID del livello restituito dal backend. Le card mostrano solo numero
+e nome e non sono cliccabili.
+
+Dopo il passaggio a Expo Router, ferma Metro con Ctrl+C e riavvialo da questa
+cartella con `npx expo start --clear`, poi apri nuovamente il QR in Expo Go.
+
 ## Verifiche locali
 
 ```bash
 npm run typecheck
+npx expo lint
+node --experimental-strip-types --test tests/levelDial.test.mjs
 npx expo install --check
 ```
 
