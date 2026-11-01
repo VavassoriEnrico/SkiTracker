@@ -1,0 +1,2 @@
+La cartella models contiene le classi Python che rappresentano le tabelle del database. 
+Ogni classe definisce le colonne, i tipi di dati e le eventuali relazioni con altre tabelle.

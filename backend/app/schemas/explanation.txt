@@ -1,0 +1,2 @@
+Uno schema definisce la struttura e i tipi di dati che l'API accetta o restituisce. 
+Serve a validare le richieste e controllare quali campi vengono mostrati nelle risposte.
