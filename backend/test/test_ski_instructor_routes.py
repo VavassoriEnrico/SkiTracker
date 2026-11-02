@@ -10,10 +10,11 @@ from sqlalchemy.pool import StaticPool
 from app.db_dependency import get_db
 from app.dependency_auth import get_current_user
 from app.main import app
-from app.models.profile import Profile
+from app.models.ski_instructor import SkiInstructor
+from app.models.ski_customer import SkiCustomer
 
 
-async def request(method, payload=None, path="/profile/me", query_string=b""):
+async def request(method, payload=None, path="/ski_instructor/me", query_string=b""):
     """Exercise FastAPI directly, without a server or HTTP client dependency."""
     body = json.dumps(payload).encode() if payload is not None else b""
     messages = []
@@ -36,12 +37,13 @@ async def request(method, payload=None, path="/profile/me", query_string=b""):
     return status, json.loads(content)
 
 
-class ProfileRouteTests(unittest.TestCase):
+class SkiInstructorRouteTests(unittest.TestCase):
     def setUp(self):
         self.engine = create_engine(
             "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
         )
-        Profile.__table__.create(self.engine)
+        SkiInstructor.__table__.create(self.engine)
+        SkiCustomer.__table__.create(self.engine)
         self.user_id = str(uuid4())
 
         def test_db():
@@ -50,17 +52,17 @@ class ProfileRouteTests(unittest.TestCase):
 
         app.dependency_overrides[get_db] = test_db
         app.dependency_overrides[get_current_user] = lambda: {
-            "id": self.user_id, "email": "student@example.com"
+            "id": self.user_id, "email": "instructor@example.com"
         }
         self.addCleanup(self.engine.dispose)
         self.addCleanup(app.dependency_overrides.clear)
 
-    def test_get_creates_and_returns_own_profile(self):
+    def test_get_creates_and_returns_own_instructor(self):
         status, body = asyncio.run(request("GET"))
         self.assertEqual(status, 200)
         self.assertEqual(body["id"], self.user_id)
-        self.assertEqual(body["email"], "student@example.com")
-        self.assertEqual(body["role"], "student")
+        self.assertEqual(body["email"], "instructor@example.com")
+        self.assertNotIn("role", body)
 
     def test_patch_preserves_omitted_fields(self):
         status, _ = asyncio.run(request("PATCH", {
@@ -77,14 +79,14 @@ class ProfileRouteTests(unittest.TestCase):
         status, _ = asyncio.run(request("PATCH", {"birth_date": "invalid"}))
         self.assertEqual(status, 422)
 
-    def test_client_cannot_override_identity_role_or_email(self):
+    def test_client_cannot_override_identity_or_email(self):
         status, body = asyncio.run(request("PATCH", {
-            "id": str(uuid4()), "role": "ski_instructor", "email": "other@example.com"
+            "id": str(uuid4()), "email": "other@example.com"
         }))
         self.assertEqual(status, 200)
         self.assertEqual(body["id"], self.user_id)
-        self.assertEqual(body["role"], "student")
-        self.assertEqual(body["email"], "student@example.com")
+        self.assertNotIn("role", body)
+        self.assertEqual(body["email"], "instructor@example.com")
 
     def test_authentication_required_for_both_routes(self):
         del app.dependency_overrides[get_current_user]

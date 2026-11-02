@@ -6,32 +6,32 @@ from sqlalchemy.orm import Session
 from app.db_dependency import get_db
 from app.dependency_auth import get_current_user
 
-from app.schemas.profile import ProfileRead, ProfileUpdate
-from app.services.profile_service import get_or_create_profile, update_profile
+from app.schemas.ski_instructor import SkiInstructorRead, SkiInstructorUpdate
+from app.services.ski_instructor_service import get_or_create_instructor, update_instructor
 
 
-router = APIRouter(prefix="/profile", tags=["profile"])
+router = APIRouter(prefix="/ski_instructor", tags=["ski_instructor"])
 
 
-@router.get("/me", response_model=ProfileRead)
-def get_my_profile(
+@router.get("/me", response_model=SkiInstructorRead)
+def get_my_instructor(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    return get_or_create_profile(
+    return get_or_create_instructor(
         db,
         user_id=UUID(current_user["id"]),
         email=current_user.get("email"),
     )
 
 
-@router.patch("/me", response_model=ProfileRead)
-def update_my_profile(
-    payload: ProfileUpdate,
+@router.patch("/me", response_model=SkiInstructorRead)
+def update_my_instructor(
+    payload: SkiInstructorUpdate,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user),
 ):
-    return update_profile(
+    return update_instructor(
         db,
         user_id=UUID(current_user["id"]),
         email=current_user.get("email"),
@@ -40,4 +40,3 @@ def update_my_profile(
         username=payload.username,
         birth_date=payload.birth_date,
     )
-

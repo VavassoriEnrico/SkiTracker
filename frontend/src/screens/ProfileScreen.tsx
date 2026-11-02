@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getProfile, updateProfile } from '../api/profile';
+import { getSkiInstructor, updateSkiInstructor } from '../api/skiInstructor';
 import { ActionButton, colors, Field } from '../components/Form';
 import { supabase } from '../lib/supabase';
-import type { Profile } from '../types/profile';
+import type { SkiInstructor } from '../types/skiInstructor';
 
 export default function ProfileScreen() {
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [instructor, setInstructor] = useState<SkiInstructor | null>(null);
   const [name, setName] = useState('');
   const [surname, setSurname] = useState('');
   const [username, setUsername] = useState('');
@@ -17,8 +17,8 @@ export default function ProfileScreen() {
   const [signingOut, setSigningOut] = useState(false);
   const [error, setError] = useState('');
 
-  function showProfile(next: Profile) {
-    setProfile(next);
+  function showInstructor(next: SkiInstructor) {
+    setInstructor(next);
     setName(next.name || '');
     setSurname(next.surname || '');
     setUsername(next.username || '');
@@ -28,17 +28,17 @@ export default function ProfileScreen() {
   async function load() {
     setLoading(true);
     setError('');
-    try { showProfile(await getProfile()); }
-    catch (error) { setError(error instanceof Error ? error.message : 'Unable to load your profile.'); }
+    try { showInstructor(await getSkiInstructor()); }
+    catch (error) { setError(error instanceof Error ? error.message : 'Unable to load your instructor.'); }
     finally { setLoading(false); }
   }
 
   useEffect(() => {
     let active = true;
-    getProfile().then(next => {
-      if (active) showProfile(next);
+    getSkiInstructor().then(next => {
+      if (active) showInstructor(next);
     }).catch(error => {
-      if (active) setError(error instanceof Error ? error.message : 'Unable to load your profile.');
+      if (active) setError(error instanceof Error ? error.message : 'Unable to load your instructor.');
     }).finally(() => {
       if (active) setLoading(false);
     });
@@ -53,13 +53,13 @@ export default function ProfileScreen() {
     setSaving(true);
     setError('');
     try {
-      showProfile(await updateProfile({
+      showInstructor(await updateSkiInstructor({
         name: name.trim(), surname: surname.trim(), username: username.trim(),
         birth_date: birthday.trim() || undefined,
       }));
       Alert.alert('Profile saved', 'Your details have been updated.');
     } catch (error) {
-      setError(error instanceof Error ? error.message : 'Unable to save your profile.');
+      setError(error instanceof Error ? error.message : 'Unable to save your instructor.');
     } finally { setSaving(false); }
   }
 
@@ -85,13 +85,13 @@ export default function ProfileScreen() {
           {loading ? <ActivityIndicator style={{ marginTop: 40 }} color={colors.accent} /> : (
             <>
               {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
-              {!profile ? <ActionButton title="Try again" onPress={load} /> : (
+              {!instructor ? <ActionButton title="Try again" onPress={load} /> : (
                 <View style={styles.card}>
                   <View style={styles.identity}>
-                    <View style={styles.avatar}><Text style={styles.initial}>{(profile.name || profile.email || 'S')[0].toUpperCase()}</Text></View>
+                    <View style={styles.avatar}><Text style={styles.initial}>{(instructor.name || instructor.email || 'S')[0].toUpperCase()}</Text></View>
                     <View style={{ flex: 1, gap: 6 }}>
-                      <Text style={styles.email}>{profile.email}</Text>
-                      <Text style={styles.role}>{profile.role === 'ski_instructor' ? 'Ski Instructor' : 'Student'}</Text>
+                      <Text style={styles.email}>{instructor.email}</Text>
+                      <Text style={styles.instructorLabel}>Ski Instructor</Text>
                     </View>
                   </View>
                   <Field label="First name" value={name} onChangeText={setName} textContentType="givenName" editable={!saving} />
@@ -131,6 +131,6 @@ const styles = StyleSheet.create({
   avatar: { width: 52, height: 52, borderRadius: 18, backgroundColor: colors.avatar, alignItems: 'center', justifyContent: 'center' },
   initial: { color: colors.accent, fontSize: 23, fontWeight: '700' },
   email: { color: colors.ink, fontSize: 14, fontWeight: '600' },
-  role: { color: colors.accent, fontSize: 12, fontWeight: '700' },
+  instructorLabel: { color: colors.accent, fontSize: 12, fontWeight: '700' },
   error: { color: colors.error, marginBottom: 18, lineHeight: 22 },
 });

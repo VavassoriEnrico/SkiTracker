@@ -6,16 +6,20 @@ from sqlalchemy.pool import StaticPool
 from app.db_dependency import get_db
 from app.main import app
 from app.models.level import Level
-from test_profile_routes import request
+from app.models.level_abilities import LevelAbility
+from test_ski_instructor_routes import request
 
 
 class LevelRouteTests(unittest.TestCase):
     def setUp(self):
         self.engine = create_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
         Level.__table__.create(self.engine)
+        LevelAbility.__table__.create(self.engine)
         with Session(self.engine) as db:
             db.add(Level(id=101, level_number=1, name="First level", explanation="Example"))
             db.add(Level(id=102, level_number=2, technical_goal="Example goal", video_url="https://example.com/video.mp4"))
+            db.add(LevelAbility(id=201, level_id=101, ability_number=1, name="First skill"))
+            db.add(LevelAbility(id=202, level_id=102, ability_number=1, name="Other level skill"))
             db.commit()
         def test_db():
             with Session(self.engine) as db:
@@ -53,3 +57,17 @@ class LevelRouteTests(unittest.TestCase):
             with self.subTest(query=query):
                 status, _ = self.get(query)
                 self.assertEqual(status, 422)
+
+    def test_ability_lookup_keeps_levels_separate(self):
+        status, body = asyncio.run(request(
+            "GET", path="/level_ability", query_string=b"level_id=102&ability_number=1"
+        ))
+        self.assertEqual(status, 200)
+        self.assertEqual(body["id"], 202)
+        self.assertEqual(body["name"], "Other level skill")
+
+    def test_missing_ability_returns_404(self):
+        status, _ = asyncio.run(request(
+            "GET", path="/level_ability", query_string=b"level_id=101&ability_number=3"
+        ))
+        self.assertEqual(status, 404)

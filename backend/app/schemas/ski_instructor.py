@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
 
-class ProfileRead(BaseModel):
+class SkiInstructorRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID
@@ -12,11 +12,10 @@ class ProfileRead(BaseModel):
     surname: str | None
     username: str | None
     email: str | None
-    role: str
     birth_date: date | None
     
     
-class ProfileUpdate(BaseModel):
+class SkiInstructorUpdate(BaseModel):
     name: str | None = None
     surname: str | None = None
     username: str | None = None

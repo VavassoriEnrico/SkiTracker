@@ -15,7 +15,15 @@
     },
     "plugins": [
       "expo-router",
-      "expo-video"
+      "expo-video",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow SkiTracker to choose client profile photos.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
     ],
     "scheme": "skitracker"
   }
