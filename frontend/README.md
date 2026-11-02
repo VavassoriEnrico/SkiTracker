@@ -2,9 +2,9 @@
 
 Frontend React Native, Expo SDK 58 e TypeScript. Per ora include registrazione,
 login, ripristino della sessione, logout e lettura/modifica del profilo.
-La barra inferiore collega Home, Levels e Profilo; il logout si trova nel Profilo.
+La barra inferiore collega Home, Levels, Clients e Profilo; il logout si trova nel Profilo.
 La navigazione usa Expo Router, con le route in `src/app`.
-Non include ancora video, analisi o richiesta del ruolo istruttore.
+Non include ancora analisi dei video.
 
 ## Configurazione
 
@@ -52,9 +52,9 @@ versione dell'app Expo Go oppure usa una development build iOS.
 - Crea un account. Se la conferma email è abilitata su Supabase, conferma
   l'indirizzo nel browser e torna all'app per effettuare il login.
   Il completamento della sessione tramite deep link non è ancora incluso.
-- Dopo il login viene chiamato `GET /profile/me`: il backend crea il profilo
-  mancante con il ruolo predefinito del backend e UUID dell'utente autenticato.
-- Modifica i dati e salva: viene chiamato `PATCH /profile/me` con il token.
+- Dopo il login viene chiamato `GET /ski_instructor/me`: il backend crea il profilo
+  mancante in `ski_instructors`, con UUID dell'utente autenticato.
+- Modifica i dati e salva: viene chiamato `PATCH /ski_instructor/me` con il token.
 - Chiudi e riapri l'app per verificare il ripristino della sessione.
 - Effettua il logout e prova anche un secondo account.
 
@@ -90,3 +90,38 @@ npx expo install --check
 
 Il test con utenti reali e iPhone va eseguito sul dispositivo: il solo
 controllo TypeScript non verifica Supabase, database o connettività Wi-Fi.
+
+## Creazione allievi
+
+La scheda Clients permette all'istruttore di creare un allievo con dati personali,
+email e password iniziale (almeno 8 caratteri). Livello e abilità sono facoltativi.
+Il frontend chiama `POST /ski_customer`; il backend crea l'utente in Supabase Auth
+e salva il profilo in `ski_customers` con lo stesso UUID. Non modifica la sessione
+dell'istruttore e non restituisce la password. Se il salvataggio del profilo fallisce,
+il backend tenta di rimuovere l'account appena creato e segnala l'eventuale errore.
+
+Per abilitare la creazione, aggiungere `SUPABASE_SECRET_KEY` al solo `backend/.env`
+e riavviare il backend. La chiave si trova in Supabase Dashboard → Settings → API Keys →
+Secret keys. Non inserire questa chiave nelle variabili `EXPO_PUBLIC_`.
+La password appartiene esclusivamente a Supabase Auth. L’email viene salvata anche in
+`ski_customers` per la ricerca. Eseguire `backend/sql/clients_directory.sql` su Supabase
+per aggiungere `email` e `profile_image_url` e recuperare le email degli account esistenti.
+
+Le pagine dell'allievo e i collegamenti tra istruttore, allievo e lezioni saranno
+aggiunti in seguito. Clients mostra una scheda cliccabile per ogni cliente, la ricerca per nome, cognome,
+username ed email, e il pulsante Add client. Il dettaglio mostra i dati personali e permette
+di aggiungere o cambiare la foto.
+
+Per le foto, creare un bucket **public** chiamato `customers-images` in Supabase Storage.
+Le foto del bucket sono accessibili a chi possiede il link. Il backend carica le immagini
+con la propria chiave segreta; il frontend non riceve mai quella chiave.
+Le immagini sono ritagliabili e opzionali, con limite di 5 MB dopo la compressione JPEG.
+Se la foto non viene salvata durante la creazione, il cliente rimane creato e si può riprovare
+dal suo dettaglio. Per ora tutti gli istruttori vedono la lista clienti condivisa;
+il collegamento tra istruttore, cliente e lezioni sarà aggiunto successivamente.
+
+Dal dettaglio di un cliente, Edit apre il modulo per nome, cognome, username,
+data di nascita, sesso, livello e abilità. Save changes salva tramite
+`PATCH /ski_customer/{id}`, riservata agli istruttori; Cancel scarta le modifiche.
+I campi facoltativi possono essere svuotati. L'email di accesso resta in sola lettura.
+La lista si aggiorna quando si torna alla pagina Clients.

@@ -7,7 +7,7 @@ const apiUrl = (
   process.env.EXPO_PUBLIC_API_URL || `http://${expoHost || '127.0.0.1'}:8001`
 ).replace(/\/$/, '');
 
-export async function request<T>(path: string, method: 'GET' | 'PATCH' = 'GET', payload?: unknown): Promise<T> {
+export async function request<T>(path: string, method: 'GET' | 'PATCH' | 'POST' = 'GET', payload?: unknown): Promise<T> {
   const { data, error } = await supabase.auth.getSession();
   if (error) throw error;
   if (!data.session) throw new Error('Please sign in again.');
@@ -33,7 +33,9 @@ export async function request<T>(path: string, method: 'GET' | 'PATCH' = 'GET', 
 
   const body = await response.json();
   if (!response.ok) {
-    throw new Error(typeof body.detail === 'string' ? body.detail : 'Unable to load or save data.');
+    const detail = body.detail;
+    const message = Array.isArray(detail) ? detail.map(item => `${item.loc?.at(-1) || 'Field'}: ${item.msg}`).join('\n') : detail;
+    throw new Error(typeof message === 'string' ? message : 'Unable to load or save data.');
   }
   return body;
 }

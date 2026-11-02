@@ -3,9 +3,9 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import { colors } from './Form';
 
-export default function PageBack({ toLevels = false }: { toLevels?: boolean }) {
+export default function PageBack({ toLevels = false, fallback }: { toLevels?: boolean; fallback?: '/' | '/clients' | '/levels' }) {
   return <Pressable accessibilityRole="button" accessibilityLabel="Go back"
-    onPress={() => router.canGoBack() ? router.back() : router.replace(toLevels ? '/levels' : '/')}
+    onPress={() => router.canGoBack() ? router.back() : router.replace(fallback ?? (toLevels ? '/levels' : '/'))}
     style={styles.button}>
     <SymbolView name="chevron.left" size={18} tintColor={colors.ink} />
     <Text style={styles.label}>Back</Text>

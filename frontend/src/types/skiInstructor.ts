@@ -1,14 +1,13 @@
-export type Profile = {
+export type SkiInstructor = {
   id: string;
   created_at: string;
   name: string | null;
   surname: string | null;
   username: string | null;
   email: string | null;
-  role: 'student' | 'ski_instructor';
   birth_date: string | null;
 };
 
-export type ProfileUpdate = Partial<
-  Pick<Profile, 'name' | 'surname' | 'username' | 'birth_date'>
+export type SkiInstructorUpdate = Partial<
+  Pick<SkiInstructor, 'name' | 'surname' | 'username' | 'birth_date'>
 >;
