@@ -4,6 +4,7 @@ import { updateCustomer } from '../api/customer';
 import type { SkiCustomer } from '../types/customer';
 import { ActionButton, colors, Field } from './Form';
 import NumberChoice from './NumberChoice';
+import SexChoice from './SexChoice';
 
 export default function ClientEditForm({ client, onSaved, onCancel }: {
   client: SkiCustomer; onSaved: (client: SkiCustomer) => void; onCancel: () => void;
@@ -51,7 +52,7 @@ export default function ClientEditForm({ client, onSaved, onCancel }: {
     <Field label="Last name" value={form.surname} onChangeText={value => change('surname', value)} textContentType="familyName" maxLength={100} editable={!saving} />
     <Field label="Username" value={form.username} onChangeText={value => change('username', value)} autoCapitalize="none" autoCorrect={false} editable={!saving} />
     <Field label="Date of birth" value={form.birthday} onChangeText={value => change('birthday', value)} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" editable={!saving} />
-    <Field label="Sex" value={form.sex} onChangeText={value => change('sex', value)} editable={!saving} />
+    <SexChoice value={form.sex} onChange={value => change('sex', value)} disabled={saving} />
     <NumberChoice label="Level" count={7} value={level} onChange={setLevel} disabled={saving} prefix="L" />
     <NumberChoice label="Ability" count={3} value={ability} onChange={setAbility} disabled={saving} />
     {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}

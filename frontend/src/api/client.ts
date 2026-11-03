@@ -7,7 +7,7 @@ const apiUrl = (
   process.env.EXPO_PUBLIC_API_URL || `http://${expoHost || '127.0.0.1'}:8001`
 ).replace(/\/$/, '');
 
-export async function request<T>(path: string, method: 'GET' | 'PATCH' | 'POST' = 'GET', payload?: unknown): Promise<T> {
+export async function request<T>(path: string, method: 'GET' | 'PATCH' | 'POST' | 'DELETE' = 'GET', payload?: unknown): Promise<T> {
   const { data, error } = await supabase.auth.getSession();
   if (error) throw error;
   if (!data.session) throw new Error('Please sign in again.');
@@ -30,6 +30,8 @@ export async function request<T>(path: string, method: 'GET' | 'PATCH' | 'POST' 
   } finally {
     clearTimeout(timeout);
   }
+
+  if (response.status === 204) return undefined as T;
 
   const body = await response.json();
   if (!response.ok) {
