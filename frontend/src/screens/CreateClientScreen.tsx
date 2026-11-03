@@ -8,6 +8,7 @@ import { ActionButton, colors, Field } from '../components/Form';
 import ClientAvatar from '../components/ClientAvatar';
 import PageBack from '../components/PageBack';
 import NumberChoice from '../components/NumberChoice';
+import SexChoice from '../components/SexChoice';
 import { chooseClientPhoto, type ClientPhoto } from '../lib/clientPhoto';
 
 const emptyForm = { name: '', surname: '', email: '', password: '', username: '', birthday: '', sex: '' };
@@ -92,7 +93,7 @@ export default function CreateClientScreen() {
           <Field label="Last name *" value={form.surname} onChangeText={value => change('surname', value)} textContentType="familyName" editable={!saving} />
           <Field label="Username (optional)" value={form.username} onChangeText={value => change('username', value)} autoCapitalize="none" autoCorrect={false} editable={!saving} />
           <Field label="Date of birth (optional)" value={form.birthday} onChangeText={value => change('birthday', value)} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" editable={!saving} />
-          <Field label="Sex (optional)" value={form.sex} onChangeText={value => change('sex', value)} editable={!saving} />
+          <SexChoice label="Sex (optional)" value={form.sex} onChange={value => change('sex', value)} disabled={saving} />
           <Text style={styles.section}>Skiing</Text>
           <NumberChoice label="Level (optional)" count={7} value={level} onChange={setLevel} disabled={saving} prefix="L" />
           <NumberChoice label="Ability (optional)" count={3} value={ability} onChange={setAbility} disabled={saving} />

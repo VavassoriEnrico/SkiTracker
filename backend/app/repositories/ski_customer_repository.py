@@ -92,3 +92,7 @@ def update_partial(db: Session, customer: SkiCustomer, fields: dict) -> SkiCusto
         setattr(customer, name, value)
     db.add(customer)
     return customer
+
+
+def get_by_ids(db: Session, customer_ids: list[UUID]) -> list[SkiCustomer]:
+    return db.query(SkiCustomer).filter(SkiCustomer.id.in_(customer_ids)).all()

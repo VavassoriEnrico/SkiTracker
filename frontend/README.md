@@ -2,7 +2,7 @@
 
 Frontend React Native, Expo SDK 58 e TypeScript. Per ora include registrazione,
 login, ripristino della sessione, logout e lettura/modifica del profilo.
-La barra inferiore collega Home, Levels, Clients e Profilo; il logout si trova nel Profilo.
+La barra inferiore collega Home, Levels, Lessons, Clients e Profilo; il logout si trova nel Profilo.
 La navigazione usa Expo Router, con le route in `src/app`.
 Non include ancora analisi dei video.
 
@@ -125,3 +125,56 @@ data di nascita, sesso, livello e abilità. Save changes salva tramite
 `PATCH /ski_customer/{id}`, riservata agli istruttori; Cancel scarta le modifiche.
 I campi facoltativi possono essere svuotati. L'email di accesso resta in sola lettura.
 La lista si aggiorna quando si torna alla pagina Clients.
+
+## Calendario lezioni
+
+Lessons mostra il calendario mensile e l'agenda del giorno selezionato, caricati da
+`GET /ski_lesson/instructor/me`. Plan apre il modulo con allievo, giorno e orari
+selezionabili a intervalli di 30 minuti. Save lesson chiama `POST /ski_lesson` e
+mostra la lezione salvata nel calendario; gli errori mantengono aperto il modulo.
+
+Il backend accetta `lesson_date`, `start_time`, `end_time`, `customer_ids` e ricava
+l'istruttore dal token. Solo gli istruttori possono creare lezioni. L'orario finale
+deve essere successivo a quello iniziale e gli orari devono essere locali,
+senza offset, con minuti 00 o 30. La data usa il nome `lesson_date` sia nel model sia nella tabella Supabase.
+
+Verifica delle funzioni calendario/orari:
+`node --experimental-strip-types --test tests/lessonCalendar.test.mjs`.
+
+## Lezioni collettive e sovrapposizioni
+
+Il modulo Lessons permette di selezionare uno o più allievi, con checkbox e riepilogo
+dei selezionati. L'API usa `customer_ids` (lista di UUID). Un solo allievo identifica
+una lezione individuale, più allievi una collettiva.
+
+In Supabase i partecipanti sono salvati nella tabella `ski_lesson_customers`, con due
+foreign key: `lesson_id` e `customer_id`. I model usano `Column` e `ForeignKey`,
+senza relationship ORM. Il repository salva esplicitamente una riga per partecipante.
+
+Prima di usare la nuova versione:
+
+1. Eseguire `backend/sql/check_lesson_overlaps.sql` nel SQL Editor di Supabase.
+   Se restituisce righe, correggere gli orari delle lezioni indicate nel Table Editor.
+2. Eseguire una sola volta l'intero `backend/sql/group_lessons.sql`. La transazione
+   copia gli allievi delle lezioni esistenti prima di eliminare il vecchio `customer_id`.
+   Se ci sono conflitti o dati incompleti, la migrazione si annulla senza modifiche parziali.
+3. Riavviare il backend e ricaricare l'app.
+
+Il backend restituisce 409 se lo stesso istruttore ha una lezione sovrapposta nello
+stesso giorno. Il vincolo PostgreSQL impedisce conflitti anche tra richieste simultanee.
+Le lezioni consecutive (09:00–10:00 e 10:00–11:00) sono consentite, come anche gli
+stessi orari per istruttori diversi. Nessun dato viene modificato automaticamente su Supabase.
+
+Nel modulo lezioni, gli orari già occupati dal maestro nel giorno selezionato
+vengono rimossi dalle opzioni di inizio. Le opzioni di fine rispettano anche gli
+impegni successivi: la nuova lezione non può attraversarne un'altra.
+La fine di una lezione può coincidere con l'inizio della successiva.
+Gli orari disponibili si aggiornano cambiando giorno e dopo ogni salvataggio.
+
+Nell'agenda Lessons, scorrere una card verso sinistra per mostrare il cestino rosso.
+Il bordo della card diventa rosso durante il gesto. Toccare il cestino chiama
+`DELETE /ski_lesson/{id}`: il backend verifica che la lezione appartenga al maestro
+che ha effettuato l'accesso e rimuove la lezione e le righe dei partecipanti.
+I clienti rimangono disponibili. La card viene rimossa dopo la risposta positiva,
+aggiornando calendario e disponibilità degli orari. Il gesto da solo mostra l'azione;
+un trascinamento verso destra richiude la card. Non servono modifiche a Supabase.

@@ -34,7 +34,7 @@ async def request(method, payload=None, path="/ski_instructor/me", query_string=
     }, receive, send)
     status = next(m["status"] for m in messages if m["type"] == "http.response.start")
     content = b"".join(m.get("body", b"") for m in messages if m["type"] == "http.response.body")
-    return status, json.loads(content)
+    return status, json.loads(content) if content else None
 
 
 class SkiInstructorRouteTests(unittest.TestCase):
