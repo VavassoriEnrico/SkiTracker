@@ -14,9 +14,9 @@ from app.models.ski_instructor import SkiInstructor
 from app.models.ski_customer import SkiCustomer
 
 
-async def request(method, payload=None, path="/ski_instructor/me", query_string=b""):
+async def request(method, payload=None, path="/ski_instructor/me", query_string=b"", *, raw_body=None, content_type="application/json"):
     """Exercise FastAPI directly, without a server or HTTP client dependency."""
-    body = json.dumps(payload).encode() if payload is not None else b""
+    body = raw_body if raw_body is not None else json.dumps(payload).encode() if payload is not None else b""
     messages = []
 
     async def receive():
@@ -29,7 +29,7 @@ async def request(method, payload=None, path="/ski_instructor/me", query_string=
         "type": "http", "asgi": {"version": "3.0"},
         "http_version": "1.1", "method": method,
         "scheme": "http", "path": path, "root_path": "",
-        "query_string": query_string, "headers": [(b"content-type", b"application/json")],
+        "query_string": query_string, "headers": [(b"content-type", content_type.encode())],
         "server": ("test", 80), "client": ("test", 1234),
     }, receive, send)
     status = next(m["status"] for m in messages if m["type"] == "http.response.start")

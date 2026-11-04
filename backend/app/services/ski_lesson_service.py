@@ -30,6 +30,13 @@ def get_lessons_by_instructor_id(db: Session, instructor_id: UUID) -> list[SkiLe
     return [to_lesson_read(db, lesson) for lesson in lessons]
 
 
+def get_lesson(db: Session, lesson_id: int, instructor_id: UUID) -> SkiLessonRead:
+    lesson = ski_lesson_repository.get_by_id_and_instructor(db, lesson_id, instructor_id)
+    if lesson is None:
+        raise HTTPException(status_code=404, detail="Lesson not found.")
+    return to_lesson_read(db, lesson)
+
+
 def get_lesson_by_instructor_id_and_customer_id(
     db: Session, instructor_id: UUID, customer_id: UUID,
 ) -> list[SkiLessonRead]:

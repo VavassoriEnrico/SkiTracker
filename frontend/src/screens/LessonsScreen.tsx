@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { SymbolView } from 'expo-symbols';
@@ -122,7 +122,8 @@ function LessonCard({ lesson, clients, onDelete }: { lesson: SkiLesson; clients:
   const client = clients[0];
   const group = lesson.customer_ids.length > 1;
   const name = clients.map(person => [person.name, person.surname].filter(Boolean).join(' ') || person.username || 'Client').join(', ') || 'Client';
-  return <SwipeToDelete onDelete={onDelete} label={`Lesson ${lesson.start_time.slice(0, 5)} to ${lesson.end_time.slice(0, 5)}, ${name}`}>
+  return <SwipeToDelete onDelete={onDelete} onOpen={() => router.push({ pathname: '/lessons/[id]', params: { id: lesson.id } })}
+    label={`Lesson ${lesson.start_time.slice(0, 5)} to ${lesson.end_time.slice(0, 5)}, ${name}`}>
     <View style={styles.lesson}>
     <View style={styles.lessonTime}><Text style={styles.start}>{lesson.start_time.slice(0, 5)}</Text><Text style={styles.end}>{lesson.end_time.slice(0, 5)}</Text></View>
     <View style={styles.rail} />
@@ -130,6 +131,7 @@ function LessonCard({ lesson, clients, onDelete }: { lesson: SkiLesson; clients:
       {group ? <View style={styles.groupIcon}><SymbolView name="person.2.fill" size={20} tintColor={colors.accent} /></View> :
         <ClientAvatar uri={client?.profile_image_url} name={client?.name} surname={client?.surname} size={36} />}
       <View style={{ flex: 1, gap: 6 }}><Text numberOfLines={2} style={styles.clientName}>{name}</Text><Text style={styles.subtitle}>{durationLabel(lesson.start_time, lesson.end_time)} · {group ? `Group · ${lesson.customer_ids.length} clients` : 'Individual'}</Text></View>
+      <SymbolView name="chevron.right" size={14} tintColor={colors.muted} />
     </View>
     </View>
   </SwipeToDelete>;

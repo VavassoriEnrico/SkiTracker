@@ -56,6 +56,15 @@ def create_my_lesson(
     return ski_lesson_service.create_lesson(db, instructor_id=instructor_id, payload=payload)
 
 
+@router.get("/{lesson_id}", response_model=SkiLessonRead)
+def get_my_lesson(
+    lesson_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    return ski_lesson_service.get_lesson(db, lesson_id, UUID(current_user["id"]))
+
+
 @router.delete("/{lesson_id}", status_code=204)
 def delete_my_lesson(
     lesson_id: int,
