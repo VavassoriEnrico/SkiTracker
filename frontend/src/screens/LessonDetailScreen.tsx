@@ -10,7 +10,7 @@ import { getSkiInstructor } from '../api/skiInstructor';
 import { deleteLessonVideo, getLessonVideos, updateLessonVideo, uploadLessonVideo } from '../api/lessonVideo';
 import { ActionButton, colors, Field } from '../components/Form';
 import ClientAvatar from '../components/ClientAvatar';
-import LevelVideo from '../components/LevelVideo';
+import LessonVideoPlayer from '../components/LessonVideoPlayer';
 import PageBack from '../components/PageBack';
 import type { SkiLesson } from '../types/lesson';
 import type { SkiCustomer } from '../types/customer';
@@ -203,7 +203,7 @@ function VideoCard({ video, clients, onSaved, onDeleted }: {
   }
 
   return <View style={styles.card}>
-    <LevelVideo url={video.video_url} />
+    <LessonVideoPlayer video={video} disabled={busy} onAnalyzed={onSaved} onBusyChange={setBusy} />
     <ClientSelector clients={clients} value={customerId} onChange={setCustomerId} disabled={busy} />
     <Field label="Comment" value={comment} onChangeText={setComment} multiline editable={!busy} placeholder="Add a comment…" />
     {changed && <ActionButton title="Save changes" loading={busy} onPress={save} />}

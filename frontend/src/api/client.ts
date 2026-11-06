@@ -17,36 +17,42 @@ export async function request<T>(path: string, method: 'GET' | 'PATCH' | 'POST' 
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   const isForm = payload instanceof FormData;
   try {
-    response = await fetch(`${apiUrl}${path}`, {
-      method,
-      headers: {
-        Authorization: `Bearer ${data.session.access_token}`,
-        ...(!isForm && { 'Content-Type': 'application/json' }),
-      },
-      body: isForm ? payload : payload ? JSON.stringify(payload) : undefined,
-      signal: controller.signal,
+    try {
+      response = await fetch(`${apiUrl}${path}`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${data.session.access_token}`,
+          ...(!isForm && { 'Content-Type': 'application/json' }),
+        },
+        body: isForm ? payload : payload ? JSON.stringify(payload) : undefined,
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new Error(isForm ? 'Video upload timed out. Try again with a shorter video.' : 'The request timed out. Please try again.');
+      }
+      if (isForm) {
+        console.warn('Video upload failed:', error instanceof Error ? error.message : String(error));
+        throw new Error('Unable to send this video. Choose it again and retry.');
+      }
+      throw new Error('Cannot reach SkiTracker. Check your Wi-Fi and try again.');
+    }
+
+    if (response.status === 204) return undefined as T;
+
+    const body = await response.json().catch(() => {
+      throw new Error(controller.signal.aborted
+        ? 'The request timed out. Please try again.'
+        : 'Unable to read the server response. Please try again.');
     });
-  } catch (error) {
-    if (controller.signal.aborted) {
-      throw new Error(isForm ? 'Video upload timed out. Try again with a shorter video.' : 'The request timed out. Please try again.');
+    if (!response.ok) {
+      const detail = body.detail;
+      const message = Array.isArray(detail) ? detail.map(item => `${item.loc?.at(-1) || 'Field'}: ${item.msg}`).join('\n') : detail;
+      throw new Error(typeof message === 'string' ? message : 'Unable to load or save data.');
     }
-    if (isForm) {
-      console.warn('Video upload failed:', error instanceof Error ? error.message : String(error));
-      throw new Error('Unable to send this video. Choose it again and retry.');
-    }
-    throw new Error('Cannot reach SkiTracker. Check your Wi-Fi and try again.');
+    return body;
   } finally {
     clearTimeout(timeout);
   }
-
-  if (response.status === 204) return undefined as T;
-
-  const body = await response.json();
-  if (!response.ok) {
-    const detail = body.detail;
-    const message = Array.isArray(detail) ? detail.map(item => `${item.loc?.at(-1) || 'Field'}: ${item.msg}`).join('\n') : detail;
-    throw new Error(typeof message === 'string' ? message : 'Unable to load or save data.');
-  }
-  return body;
 }
 

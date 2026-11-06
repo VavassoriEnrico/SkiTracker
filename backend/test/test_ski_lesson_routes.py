@@ -12,6 +12,7 @@ from app.main import app
 from app.models.ski_customer import SkiCustomer
 from app.models.ski_instructor import SkiInstructor
 from app.models.ski_lesson import SkiLesson
+from app.models.ski_videos import SkiVideo
 from test_ski_instructor_routes import request
 
 
@@ -38,6 +39,7 @@ class SkiLessonRouteTests(unittest.TestCase):
                     PRIMARY KEY (lesson_id, customer_id)
                 )
             """)
+        SkiVideo.__table__.create(self.engine)
         self.instructor_id = uuid4()
         self.customer_id = uuid4()
         with Session(self.engine) as db:
@@ -182,6 +184,45 @@ class SkiLessonRouteTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual([lesson["id"] for lesson in lessons], [second["id"]])
         self.assertEqual(self.create(customer_ids=ids)[0], 201)
+
+    def test_delete_lesson_removes_its_videos_and_storage_files_only(self):
+        from unittest.mock import patch
+        from app.services import video_storage
+
+        _, first = self.create()
+        _, second = self.create(start_time="10:00:00", end_time="11:00:00")
+        prefix = "https://storage.example/storage/v1/object/public/lesson-videos/"
+        with Session(self.engine) as db:
+            db.add_all([
+                SkiVideo(id=1000, lesson_id=first["id"], video_url=prefix + "original.mp4",
+                         storage_path="original.mp4", skeleton_video_url=prefix + "skeleton.mp4",
+                         pose_data_url=prefix + "points.json"),
+                SkiVideo(id=1001, lesson_id=second["id"], video_url=prefix + "other.mp4", storage_path="other.mp4"),
+            ])
+            db.commit()
+        with patch.object(video_storage.settings, "supabase_url", "https://storage.example"), patch.object(video_storage, "delete") as delete:
+            status, _ = asyncio.run(request("DELETE", path=f"/ski_lesson/{first['id']}"))
+        self.assertEqual(status, 204)
+        self.assertEqual([call.args[0] for call in delete.call_args_list], ["skeleton.mp4", "points.json", "original.mp4"])
+        with Session(self.engine) as db:
+            self.assertIsNone(db.get(SkiVideo, 1000))
+            self.assertIsNotNone(db.get(SkiVideo, 1001))
+            self.assertIsNotNone(db.get(SkiLesson, second["id"]))
+
+    def test_storage_failure_does_not_remove_lesson_or_video_records(self):
+        from unittest.mock import patch
+        from fastapi import HTTPException
+
+        _, lesson = self.create()
+        with Session(self.engine) as db:
+            db.add(SkiVideo(id=1000, lesson_id=lesson["id"], video_url="https://example.com/video.mp4", storage_path="original.mp4"))
+            db.commit()
+        with patch("app.services.ski_videos_service.video_storage.delete", side_effect=HTTPException(status_code=503, detail="Storage unavailable")):
+            status, _ = asyncio.run(request("DELETE", path=f"/ski_lesson/{lesson['id']}"))
+        self.assertEqual(status, 503)
+        with Session(self.engine) as db:
+            self.assertIsNotNone(db.get(SkiLesson, lesson["id"]))
+            self.assertIsNotNone(db.get(SkiVideo, 1000))
 
     def test_delete_another_instructors_lesson_is_rejected(self):
         status, lesson = self.create()

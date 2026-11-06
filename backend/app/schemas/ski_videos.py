@@ -11,6 +11,8 @@ class SkiVideoRead(BaseModel):
     video_url: str
     comment: str | None = None
     customer_id: UUID | None = None
+    skeleton_video_url: str | None = None
+    pose_data_url: str | None = None
     
 
 class SkiVideoUpdate(BaseModel):

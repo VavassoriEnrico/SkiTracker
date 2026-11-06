@@ -4,7 +4,8 @@ from fastapi import HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.repositories import ski_lesson_repository, ski_customer_repository
+from app.repositories import ski_lesson_repository, ski_customer_repository, ski_videos_repository
+from app.services import ski_videos_service
 from app.models.ski_lesson import SkiLesson
 from app.schemas.ski_lesson import SkiLessonCreate, SkiLessonRead
 
@@ -70,5 +71,7 @@ def delete_lesson(db: Session, *, lesson_id: int, instructor_id: UUID) -> None:
     lesson = ski_lesson_repository.get_by_id_and_instructor(db, lesson_id, instructor_id)
     if lesson is None:
         raise HTTPException(status_code=404, detail="Lesson not found.")
+    for video in ski_videos_repository.get_videos_by_lesson(db, lesson_id):
+        ski_videos_service.delete_video_files(video)
     ski_lesson_repository.delete(db, lesson)
     db.commit()

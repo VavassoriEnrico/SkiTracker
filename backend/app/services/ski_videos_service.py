@@ -57,10 +57,16 @@ def create_video(
     return video
 
 
-def delete_video(db: Session, video_id: int, instructor_id: UUID) -> None:
-    video = get_video(db, video_id, instructor_id)
+def delete_video_files(video: SkiVideo) -> None:
+    video_storage.delete_url(video.skeleton_video_url)
+    video_storage.delete_url(video.pose_data_url)
     if video.storage_path:
         video_storage.delete(video.storage_path)
+
+
+def delete_video(db: Session, video_id: int, instructor_id: UUID) -> None:
+    video = get_video(db, video_id, instructor_id)
+    delete_video_files(video)
     ski_videos_repository.delete(db, video)
     db.commit()
 

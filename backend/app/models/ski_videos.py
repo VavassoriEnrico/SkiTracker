@@ -12,3 +12,5 @@ class SkiVideo(Base):
     comment = Column(Text, nullable=True)
     customer_id = Column(Uuid, ForeignKey("ski_customers.id"), nullable=True)
     storage_path = Column(Text, nullable=True)
+    skeleton_video_url = Column(Text, nullable=True)
+    pose_data_url = Column(Text, nullable=True)

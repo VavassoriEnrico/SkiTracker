@@ -2,6 +2,7 @@ import type { ImagePickerAsset } from 'expo-image-picker';
 import { File } from 'expo-file-system';
 import { request } from './client';
 import type { LessonVideo } from '../types/lessonVideo';
+import type { PoseData } from '../types/pose';
 
 export function getLessonVideos(lessonId: number) {
   return request<LessonVideo[]>(`/ski_videos?lesson_id=${lessonId}`);
@@ -25,4 +26,24 @@ export function updateLessonVideo(id: number, payload: Pick<LessonVideo, 'commen
 
 export function deleteLessonVideo(id: number) {
   return request<void>(`/ski_videos/${id}`, 'DELETE');
+}
+
+export function analyzeLessonVideo(id: number) {
+  return request<LessonVideo>(`/ski_videos/${id}/analyze`, 'POST', undefined, 300000);
+}
+
+export async function getPoseData(url: string): Promise<PoseData> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 60000);
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+    if (!response.ok) throw new Error('Unable to load skeleton points. Please try again.');
+    return await response.json();
+  } catch {
+    throw new Error(controller.signal.aborted
+      ? 'Loading skeleton points timed out. Please try again.'
+      : 'Unable to load skeleton points. Check your connection and try again.');
+  } finally {
+    clearTimeout(timeout);
+  }
 }

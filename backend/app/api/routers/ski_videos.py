@@ -7,6 +7,7 @@ from app.db_dependency import get_db
 from app.dependency_auth import get_current_user
 from app.schemas.ski_videos import SkiVideoCreate, SkiVideoRead, SkiVideoUpdate
 from app.services import ski_videos_service
+from app.services import ski_video_analysis_service
 
 router = APIRouter(prefix="/ski_videos", tags=["ski_videos"])
 
@@ -42,6 +43,15 @@ def upload_video(
         db, instructor_id=UUID(current_user["id"]), lesson_id=lesson_id,
         file=file, customer_id=customer_id, comment=comment,
     )
+
+
+@router.post("/{video_id}/analyze", response_model=SkiVideoRead)
+def analyze_video(
+    video_id: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user),
+):
+    return ski_video_analysis_service.analyze_video(db, video_id, UUID(current_user["id"]))
 
 
 @router.patch("/{video_id}", response_model=SkiVideoRead)

@@ -1,7 +1,9 @@
 import asyncio
+import json
 import unittest
 from datetime import date, time
 from io import BytesIO
+from pathlib import Path
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -18,6 +20,8 @@ from app.models.ski_customer import SkiCustomer
 from app.models.ski_lesson_customer import SkiLessonCustomer
 from app.schemas.ski_videos import SkiVideoUpdate
 from app.services import ski_videos_service as service
+from app.services import ski_video_analysis_service as analysis_service
+from app.services import video_storage
 from app.main import app
 from app.db_dependency import get_db
 from app.dependency_auth import get_current_user
@@ -40,7 +44,9 @@ class SkiVideoServiceTests(unittest.TestCase):
                     video_url TEXT NOT NULL,
                     comment TEXT,
                     customer_id CHAR(32),
-                    storage_path TEXT
+                    storage_path TEXT,
+                    skeleton_video_url TEXT,
+                    pose_data_url TEXT
                 )
             """)
         self.db = Session(self.engine)
@@ -224,3 +230,93 @@ class SkiVideoServiceTests(unittest.TestCase):
         self.assertEqual(video["customer_id"], str(self.customer_id))
         self.assertEqual(video["comment"], "Turn practice")
         self.assertEqual(upload.call_args.args[1], b"video bytes")
+
+    def mock_analysis(self):
+        def run_graph(state):
+            folder = Path(state["output_dir"])
+            folder.mkdir()
+            skeleton = folder / "skeleton_only.mp4"
+            points = folder / "pose_results.json"
+            skeleton.write_bytes(b"skeleton video")
+            points.write_text(json.dumps({"fps": 25, "width": 848, "height": 478, "frames": []}))
+            return {"skeleton_path": str(skeleton), "pose_data_path": str(points)}
+
+        graph = self.enterContext(patch.object(analysis_service.video_analysis_graph, "invoke", side_effect=run_graph))
+        download = self.enterContext(patch.object(video_storage, "download", side_effect=lambda path, target: target.write_bytes(b"original video")))
+        upload = self.enterContext(patch.object(video_storage, "upload", side_effect=lambda path, content, mime: f"https://storage.example/storage/v1/object/public/lesson-videos/{path}"))
+        delete = self.enterContext(patch.object(video_storage, "delete"))
+        self.enterContext(patch.object(video_storage.settings, "supabase_url", "https://storage.example"))
+        return graph, download, upload, delete
+
+    def test_analysis_route_persists_urls_and_reuses_saved_results(self):
+        self.route_setup()
+        graph, download, upload, _ = self.mock_analysis()
+        video = self.create(storage_path="100/original.mp4", comment="Keep this comment", customer_id=self.customer_id)
+        status, body = asyncio.run(request("POST", path=f"/ski_videos/{video.id}/analyze"))
+        self.assertEqual(status, 200)
+        self.assertTrue(body["skeleton_video_url"].endswith("/skeleton_only.mp4"))
+        self.assertTrue(body["pose_data_url"].endswith("/pose_results.json"))
+        self.assertEqual(body["comment"], "Keep this comment")
+        self.assertEqual(body["customer_id"], str(self.customer_id))
+        self.assertEqual([call.args[2] for call in upload.call_args_list], ["video/mp4", "application/json"])
+        self.assertFalse(Path(graph.call_args.args[0]["output_dir"]).exists())
+
+        self.db.expire_all()
+        again = analysis_service.analyze_video(self.db, video.id, self.instructor_id)
+        self.assertEqual(again.pose_data_url, body["pose_data_url"])
+        graph.assert_called_once()
+        download.assert_called_once()
+        self.assertEqual(upload.call_count, 2)
+
+    def test_analysis_requires_owner_and_login_before_downloading(self):
+        self.route_setup()
+        _, download, _, _ = self.mock_analysis()
+        video = self.create(storage_path="100/original.mp4")
+        app.dependency_overrides[get_current_user] = lambda: {"id": str(self.other_id)}
+        status, _ = asyncio.run(request("POST", path=f"/ski_videos/{video.id}/analyze"))
+        self.assertEqual(status, 404)
+        del app.dependency_overrides[get_current_user]
+        status, _ = asyncio.run(request("POST", path=f"/ski_videos/{video.id}/analyze"))
+        self.assertEqual(status, 401)
+        download.assert_not_called()
+
+    def test_analysis_rejects_external_video_urls_without_downloading(self):
+        _, download, _, _ = self.mock_analysis()
+        video = self.create(video_url="http://localhost/private")
+        with self.assertRaises(HTTPException) as raised:
+            analysis_service.analyze_video(self.db, video.id, self.instructor_id)
+        self.assertEqual(raised.exception.status_code, 400)
+        download.assert_not_called()
+
+    def test_failed_json_upload_removes_only_new_skeleton_and_keeps_video(self):
+        graph, _, upload, delete = self.mock_analysis()
+        video = self.create(storage_path="100/original.mp4")
+        upload.side_effect = ["https://storage.example/new.mp4", HTTPException(status_code=503, detail="Upload failed")]
+        with self.assertRaises(HTTPException):
+            analysis_service.analyze_video(self.db, video.id, self.instructor_id)
+        delete.assert_called_once_with(upload.call_args_list[0].args[0])
+        self.db.refresh(video)
+        self.assertIsNone(video.skeleton_video_url)
+        self.assertIsNone(video.pose_data_url)
+        self.assertEqual(video.storage_path, "100/original.mp4")
+        self.assertFalse(Path(graph.call_args.args[0]["output_dir"]).exists())
+
+    def test_failed_commit_cleans_up_both_new_analysis_files(self):
+        _, _, upload, delete = self.mock_analysis()
+        video = self.create(storage_path="100/original.mp4")
+        with patch.object(self.db, "commit", side_effect=RuntimeError("Database unavailable")):
+            with self.assertLogs("app.services.ski_video_analysis_service", level="ERROR"), self.assertRaises(HTTPException) as raised:
+                analysis_service.analyze_video(self.db, video.id, self.instructor_id)
+        self.assertEqual(raised.exception.status_code, 503)
+        self.assertEqual([call.args[0] for call in delete.call_args_list], [call.args[0] for call in upload.call_args_list])
+        self.db.refresh(video)
+        self.assertIsNone(video.skeleton_video_url)
+
+    def test_deleting_analyzed_video_removes_all_three_files(self):
+        self.mock_analysis()
+        video = self.create(storage_path="100/original.mp4")
+        video = analysis_service.analyze_video(self.db, video.id, self.instructor_id)
+        with patch.object(video_storage, "delete") as delete:
+            service.delete_video(self.db, video.id, self.instructor_id)
+        self.assertEqual(delete.call_count, 3)
+        self.assertEqual(delete.call_args_list[-1].args[0], "100/original.mp4")
