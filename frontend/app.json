@@ -19,7 +19,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Allow SkiTracker to choose client profile photos.",
+          "photosPermission": "Allow SkiTracker to choose client photos and lesson videos.",
           "cameraPermission": false,
           "microphonePermission": false
         }

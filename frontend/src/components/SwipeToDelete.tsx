@@ -6,8 +6,8 @@ import { colors } from './Form';
 const REVEAL = 84;
 const RED = '#EF4444';
 
-export default function SwipeToDelete({ children, onDelete, label }: {
-  children: ReactNode; onDelete: () => Promise<void>; label: string;
+export default function SwipeToDelete({ children, onDelete, label, onOpen }: {
+  children: ReactNode; onDelete: () => Promise<void>; label: string; onOpen?: () => void;
 }) {
   const [offset] = useState(() => new Animated.Value(0));
   const position = useRef(0);
@@ -57,10 +57,14 @@ export default function SwipeToDelete({ children, onDelete, label }: {
       </Pressable>
     </Animated.View>
     <Animated.View {...responder.panHandlers} accessible accessibilityLabel={label}
-      accessibilityActions={[{ name: 'delete', label: 'Delete lesson' }]}
-      onAccessibilityAction={event => { if (event.nativeEvent.actionName === 'delete') void remove(); }}
+      accessibilityRole={onOpen ? 'button' : undefined}
+      accessibilityActions={[{ name: 'activate', label: 'Open lesson' }, { name: 'delete', label: 'Delete lesson' }]}
+      onAccessibilityAction={event => {
+        if (event.nativeEvent.actionName === 'delete') void remove();
+        if (event.nativeEvent.actionName === 'activate') onOpen?.();
+      }}
       style={[styles.card, { borderColor, transform: [{ translateX: offset }] }]}>
-      {children}
+      <Pressable accessible={false} disabled={removing} onPress={() => open ? snap(false) : onOpen?.()}>{children}</Pressable>
     </Animated.View>
   </View>;
 }

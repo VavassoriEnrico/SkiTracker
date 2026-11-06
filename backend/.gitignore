@@ -1,3 +1,9 @@
 .env
 .venv/
 __pycache__/
+
+# Local inputs, generated results and downloadable model weights.
+/video.mp4
+/pose_results.json
+/outputs/
+/app/integrations/models/weights/

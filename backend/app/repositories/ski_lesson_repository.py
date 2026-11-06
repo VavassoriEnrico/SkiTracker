@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.models.ski_lesson import SkiLesson
 from app.models.ski_lesson_customer import SkiLessonCustomer
+from app.models.ski_videos import SkiVideo
 
 
 def get_lessons_by_customer(db: Session, customer_id: UUID) -> list[SkiLesson]:
@@ -82,5 +83,6 @@ def get_by_id_and_instructor(db: Session, lesson_id: int, instructor_id: UUID) -
 
 
 def delete(db: Session, lesson: SkiLesson) -> None:
+    db.query(SkiVideo).filter(SkiVideo.lesson_id == lesson.id).delete()
     db.query(SkiLessonCustomer).filter(SkiLessonCustomer.lesson_id == lesson.id).delete()
     db.delete(lesson)

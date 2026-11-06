@@ -5,6 +5,7 @@ from app.api.routers import ski_customer
 from app.api.routers import ski_lesson
 from app.api.routers import level
 from app.api.routers import level_abilities
+from app.api.routers import ski_videos
 
 
 app = FastAPI(title="SkiTracker")
@@ -14,3 +15,4 @@ app.include_router(ski_customer.router)
 app.include_router(ski_lesson.router)
 app.include_router(level.router)
 app.include_router(level_abilities.router)
+app.include_router(ski_videos.router)

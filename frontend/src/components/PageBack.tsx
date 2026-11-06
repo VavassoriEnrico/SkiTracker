@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text } from 'react-native';
 import { SymbolView } from 'expo-symbols';
 import { colors } from './Form';
 
-export default function PageBack({ toLevels = false, fallback }: { toLevels?: boolean; fallback?: '/' | '/clients' | '/levels' }) {
+export default function PageBack({ toLevels = false, fallback }: { toLevels?: boolean; fallback?: '/' | '/clients' | '/levels' | '/lessons' }) {
   return <Pressable accessibilityRole="button" accessibilityLabel="Go back"
     onPress={() => router.canGoBack() ? router.back() : router.replace(fallback ?? (toLevels ? '/levels' : '/'))}
     style={styles.button}>

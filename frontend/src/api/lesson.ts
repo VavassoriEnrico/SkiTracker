@@ -5,6 +5,10 @@ export function getInstructorLessons() {
   return request<SkiLesson[]>('/ski_lesson/instructor/me');
 }
 
+export function getLesson(id: number) {
+  return request<SkiLesson>(`/ski_lesson/${id}`);
+}
+
 export function createLesson(payload: LessonDraft) {
   return request<SkiLesson>('/ski_lesson', 'POST', payload);
 }
